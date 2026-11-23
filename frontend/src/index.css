@@ -1,0 +1,186 @@
+/* ============================================================
+   SISTEMA DE TINTE DINÁMICO TIPO MATERIAL YOU (Android)
+   - Cada acento define SOLO un color base (--primary).
+   - Todos los demás tonos se derivan con color-mix().
+   - Modo claro y oscuro comparten la misma lógica.
+   ============================================================ */
+
+:root {
+  /* Color base por defecto (azul). Se sobreescribe con data-accent */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+
+  /* ====== MODO CLARO (derivado del acento) ====== */
+  --bg:          color-mix(in srgb, var(--primary) 6%,  #ffffff);
+  --bg-card:     color-mix(in srgb, var(--primary) 3%,  #ffffff);
+  --bg-soft:     color-mix(in srgb, var(--primary) 8%,  #ffffff);
+  --bg-muted:    color-mix(in srgb, var(--primary) 14%, #ffffff);
+
+  --text-h:      color-mix(in srgb, var(--primary) 65%, #000000);
+  --text:        color-mix(in srgb, var(--primary) 25%, #1a1a1a);
+  --text-soft:   color-mix(in srgb, var(--primary) 35%, #4a4a4a);
+  --text-muted:  color-mix(in srgb, var(--primary) 25%, #7a7a7a);
+
+  --border:      color-mix(in srgb, var(--primary) 20%, #ffffff);
+  --border-soft: color-mix(in srgb, var(--primary) 10%, #ffffff);
+
+  --primary-soft:   color-mix(in srgb, var(--primary) 15%, transparent);
+  --primary-border: color-mix(in srgb, var(--primary) 45%, transparent);
+
+  /* Estados */
+  --danger-bg:     #fff5f5;
+  --danger-border: #f0c0c0;
+  --danger-text:   #8b1a1a;
+  --success:       #1e7e34;
+  --success-bg:    #f0f7f0;
+  --success-border:#b8d9b8;
+    /* Violeta (Tiempo Muerto) */
+  --downtime: #8b5cf6;
+  --downtime-bg: color-mix(in srgb, #8b5cf6 12%, #ffffff);
+  --downtime-border: color-mix(in srgb, #8b5cf6 45%, #ffffff);
+  --downtime-text: color-mix(in srgb, #8b5cf6 70%, #000000);
+
+  --shadow: 0 4px 20px rgba(0, 20, 40, 0.08);
+
+  /* Tipografía */
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 16px/145% var(--sans);
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ====== MODO OSCURO (derivado del acento) ====== */
+[data-theme='dark'] {
+  --bg:          color-mix(in srgb, var(--primary) 6%,  #0a0d12);
+  --bg-card:     color-mix(in srgb, var(--primary) 8%,  #10141a);
+  --bg-soft:     color-mix(in srgb, var(--primary) 12%, #141820);
+  --bg-muted:    color-mix(in srgb, var(--primary) 18%, #1a1f28);
+
+  --text-h:      color-mix(in srgb, var(--primary) 30%, #ffffff);
+  --text:        color-mix(in srgb, var(--primary) 12%, #e2e8f0);
+  --text-soft:   color-mix(in srgb, var(--primary) 20%, #94a3b8);
+  --text-muted:  color-mix(in srgb, var(--primary) 15%, #64748b);
+
+  --border:      color-mix(in srgb, var(--primary) 20%, #2e3a48);
+  --border-soft: color-mix(in srgb, var(--primary) 12%, #2a3441);
+
+  --primary-soft:   color-mix(in srgb, var(--primary) 25%, transparent);
+  --primary-border: color-mix(in srgb, var(--primary) 55%, transparent);
+
+  --danger-bg:     #2a1515;
+  --danger-border: #5c2626;
+  --danger-text:   #fca5a5;
+  --success:       #4ade80;
+  --success-bg:    #10241a;
+  --success-border:#1f4a2e;
+    /* Violeta (Tiempo Muerto) */
+  --downtime: #a78bfa;
+  --downtime-bg: color-mix(in srgb, #a78bfa 15%, #10141a);
+  --downtime-border: color-mix(in srgb, #a78bfa 45%, #2e3a48);
+  --downtime-text: color-mix(in srgb, #a78bfa 70%, #ffffff);
+
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+/* ============================================================
+   ACENTOS — solo cambian --primary y --primary-hover.
+   Todo lo demás se deriva automáticamente.
+   ============================================================ */
+
+/* Azul (default) — ya definido arriba */
+
+[data-accent='green'] {
+  --primary: #22c55e;
+  --primary-hover: #16a34a;
+}
+
+[data-accent='lila'] {
+  --primary: #a78bfa;
+  --primary-hover: #8b5cf6;
+}
+
+[data-accent='menta'] {
+  --primary: #2dd4bf;
+  --primary-hover: #14b8a6;
+}
+
+[data-accent='amarillo'] {
+  --primary: #eab308;
+  --primary-hover: #ca8a04;
+}
+
+[data-accent='naranja'] {
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+}
+
+[data-accent='rosa'] {
+  --primary: #ec4899;
+  --primary-hover: #db2777;
+}
+
+[data-accent='celeste'] {
+  --primary: #0ea5e9;
+  --primary-hover: #0284c7;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  text-align: center;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--bg);
+}
+
+h1, h2, h3 {
+  font-family: var(--sans);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+code, .counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--bg-muted);
+}
