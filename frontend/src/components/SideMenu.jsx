@@ -1,13 +1,30 @@
-import { useNavigate } from 'react-router-dom';
+// From Uiverse.io by DipeshPun91 - https://uiverse.io/DipeshPun91/curvy-termite-76
+// MIT License, Copyright (c) DipeshPun91 (Dipesh Pun)
+// Adaptado a React + Lucide + sistema de temas del proyecto.
+
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  Home,
+  BarChart3,
+  Settings as SettingsIcon,
+  LogOut,
+  ChevronRight,
+} from 'lucide-react';
+import { Users } from 'lucide-react';
 
-export default function SideMenu({ isOpen, onClose, onNavigateMetrics }) {
-  const { profile, logout } = useAuth();
+export default function SideMenu({ isOpen, onClose }) {
+  const { profile, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleGoSettings = () => {
+  const role = profile?.role;
+  const homePath =
+    role === 'admin' ? '/admin' : role === 'lider' ? '/lider' : '/empleado';
+
+  const go = (path) => {
     onClose();
-    navigate('/ajustes');
+    navigate(path);
   };
 
   const handleLogout = async () => {
@@ -15,6 +32,8 @@ export default function SideMenu({ isOpen, onClose, onNavigateMetrics }) {
     await logout();
     navigate('/login');
   };
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
@@ -32,32 +51,76 @@ export default function SideMenu({ isOpen, onClose, onNavigateMetrics }) {
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
       >
-        <div style={styles.profileBox}>
-          <div style={styles.avatar}>
-            {profile?.name?.charAt(0).toUpperCase() || '?'}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={styles.profileName}>{profile?.name || 'Usuario'}</div>
-            <div style={styles.profileRole}>{roleLabel(profile?.role)}</div>
-          </div>
+        {/* Cabecera */}
+        <div style={styles.profileHeader}>
+          <p style={styles.profileName}>{profile?.name || 'Usuario'}</p>
+          <p style={styles.profileEmail}>{user?.email || 'usuario@ejemplo.com'}</p>
         </div>
 
+        {/* Items del menú */}
         <nav style={styles.nav}>
-          <button onClick={onNavigateMetrics} style={styles.item}>
-            📊 Métricas
-          </button>
-          <button onClick={handleGoSettings} style={styles.item}>
-            ⚙️ Ajustes
-          </button>
+          <MenuItem
+            icon={<Home size={18} />}
+            label="Contador"
+            active={isActive(homePath)}
+            onClick={() => go(homePath)}
+          />
+          {role !== 'lider' && role !== 'admin' && (
+            <MenuItem
+              icon={<BarChart3 size={18} />}
+              label="Métricas"
+              active={isActive('/metricas')}
+              onClick={() => go('/metricas')}
+            />
+          )}
+          {role === 'admin' && (
+          <MenuItem
+            icon={<Users size={18} />}
+            label="Usuarios"
+            active={isActive('/admin/usuarios')}
+            onClick={() => go('/admin')} // temporal, mañana lo separamos
+          />
+          )}
+          <MenuItem
+            icon={<SettingsIcon size={18} />}
+            label="Ajustes"
+            active={isActive('/ajustes')}
+            onClick={() => go('/ajustes')}
+          />
+          <MenuItem
+            icon={<LogOut size={18} />}
+            label="Cerrar sesión"
+            active={false}
+            danger
+            onClick={handleLogout}
+          />
+
         </nav>
 
+        {/* Rol al pie */}
         <div style={styles.footer}>
-          <button onClick={handleLogout} style={styles.logoutBtn}>
-            Cerrar sesión
-          </button>
+          <span style={styles.roleBadge}>{roleLabel(profile?.role)}</span>
         </div>
       </aside>
     </>
+  );
+}
+
+function MenuItem({ icon, label, active, danger = false, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`side-menu-item ${danger ? 'is-danger' : ''} ${
+        active ? 'is-active' : ''
+      }`}
+    >
+      <span className="side-menu-bar" />
+      <span className="side-menu-icon">{icon}</span>
+      <span className="side-menu-label">{label}</span>
+      <span className="side-menu-chevron">
+        <ChevronRight size={14} />
+      </span>
+    </button>
   );
 }
 
@@ -75,99 +138,77 @@ function roleLabel(role) {
 const styles = {
   overlay: {
     position: 'fixed',
-    inset: 0,
+    top: '72px',
+    left: 0,
+    right: 0,
+    bottom: 0,
     background: 'rgba(0,20,40,0.3)',
-    zIndex: 200,
+    zIndex: 99,
     transition: 'opacity 0.25s ease',
   },
   panel: {
     position: 'fixed',
-    top: 0,
+    top: '72px',
     left: 0,
-    width: '280px',
-    height: '100vh',
+    width: '300px',
+    height: 'calc(100vh - 72px)',
     background: 'var(--bg-card)',
     boxShadow: '4px 0 20px rgba(0,20,40,0.1)',
-    zIndex: 201,
+    zIndex: 100,
     display: 'flex',
     flexDirection: 'column',
-    padding: '24px 16px',
     transition: 'transform 0.3s ease',
     boxSizing: 'border-box',
     overflowY: 'auto',
   },
-  profileBox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '16px',
-    background: 'var(--bg-soft)',
-    borderRadius: '12px',
-    border: '1px solid var(--border-soft)',
-    marginBottom: '20px',
-    flexShrink: 0,
-  },
-  avatar: {
-    width: '46px',
-    height: '46px',
-    borderRadius: '50%',
-    background: 'var(--primary)',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '1.3rem',
-    fontWeight: 700,
-    flexShrink: 0,
+
+   profileHeader: {
+    padding: '20px 20px 16px 20px',
+    borderBottom: '1px solid var(--border-soft)',
+    background: `linear-gradient(90deg, var(--primary), var(--primary-hover))`,
   },
   profileName: {
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    color: 'var(--text-h)',
+    margin: 0,
+    fontSize: '1.15rem',
+    fontWeight: 700,
+    color: '#fff',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    lineHeight: 1.2,
+  },
+  profileEmail: {
+    margin: '4px 0 0 0',
+    fontSize: '0.75rem',
+    color: 'rgba(255,255,255,0.8)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  profileRole: {
-    fontSize: '0.7rem',
-    fontWeight: 600,
-    color: 'var(--text-soft)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-    marginTop: '2px',
-  },
+
+  // Navegación
   nav: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    padding: '8px 0',
     flex: 1,
   },
-  item: {
-    padding: '12px 16px',
-    background: 'transparent',
-    border: '1px solid transparent',
-    borderRadius: '10px',
-    textAlign: 'left',
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    color: 'var(--text)',
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-  },
+
+  // Footer con rol
   footer: {
+    padding: '12px 20px 16px 20px',
     borderTop: '1px solid var(--border-soft)',
-    paddingTop: '16px',
-    flexShrink: 0,
+    display: 'flex',
+    justifyContent: 'center',
   },
-  logoutBtn: {
-    width: '100%',
-    padding: '12px',
-    background: 'var(--danger-bg)',
-    border: '1px solid var(--danger-border)',
-    color: 'var(--danger-text)',
-    borderRadius: '10px',
-    fontSize: '0.9rem',
-    fontWeight: 600,
-    cursor: 'pointer',
+  roleBadge: {
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    color: 'var(--primary)',
+    background: 'var(--primary-soft)',
+    padding: '4px 12px',
+    borderRadius: '20px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
   },
 };

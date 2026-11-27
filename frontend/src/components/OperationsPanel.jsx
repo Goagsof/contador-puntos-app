@@ -1,5 +1,12 @@
+// From Uiverse.io by Randdose - https://uiverse.io/Randdose/brown-grasshopper-46
+// MIT License, Copyright (c) Randdose (Randomness)
+// Adaptado a React + sistema de temas del proyecto.
+
 import { useState } from 'react';
 import { departmentOperations } from '../data/departments';
+
+const CTS_LEFT = '#ADD9BD';  // menta
+const CTS_RIGHT = '#D98E04'; // naranja
 
 export default function OperationsPanel({ departments = [], onOperationClick }) {
   const [hoveredBtn, setHoveredBtn] = useState(null);
@@ -9,40 +16,53 @@ export default function OperationsPanel({ departments = [], onOperationClick }) 
     const isHovered = hoveredBtn === key;
     const isGradient = op.colorMode === 'gradient';
 
+    // Colores de borde y texto
+    const borderColor = hasColor
+      ? isGradient
+        ? `linear-gradient(90deg, ${CTS_LEFT}, ${CTS_RIGHT})` // no se usa como border, se usa abajo
+        : op.color
+      : 'var(--primary)';
+
+    // Para CT's usamos borde con degradado (se aplica con border-image)
+    // Para el resto, borde sólido.
     const baseStyle = {
       ...styles.button,
-      ...(hasColor
+      ...(isGradient
         ? {
-            borderLeft: isGradient
-              ? '6px solid #ADD9BD'
-              : `6px solid ${op.color}`,
-            borderRight: isGradient
-              ? '6px solid #D98E04'
-              : `6px solid ${op.color}`,
-            borderTop: '1px solid var(--border)',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-card)',
-            color: 'var(--text)',
+            borderImage: `linear-gradient(90deg, ${CTS_LEFT}, ${CTS_RIGHT}) 1`,
+            color: 'var(--text-h)',
           }
-        : {}),
-      ...(isHovered
-        ? {
-            transform: 'translateY(-1px)',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
-            background: 'var(--bg-soft)',
-          }
-        : {}),
+        : {
+            borderColor: borderColor,
+            color: hasColor ? op.color : 'var(--primary)',
+          }),
+      ...(isHovered ? styles.buttonHover : {}),
     };
+
+    // Colores de los círculos
+    const leftCircleColor = isGradient ? CTS_LEFT : (hasColor ? op.color : 'var(--primary)');
+    const rightCircleColor = isGradient ? CTS_RIGHT : (hasColor ? op.color : 'var(--primary)');
 
     return (
       <button
         key={key}
         style={baseStyle}
+        className={`op-case-btn ${isGradient ? 'is-gradient' : ''}`}
         onMouseEnter={() => setHoveredBtn(key)}
         onMouseLeave={() => setHoveredBtn(null)}
         onClick={() => onOperationClick(op, key)}
       >
-        {op.description} ({op.points.toFixed(3)})
+        <span
+          className="op-case-circle op-case-circle-left"
+          style={{ background: leftCircleColor }}
+        />
+        <span
+          className="op-case-circle op-case-circle-right"
+          style={{ background: rightCircleColor }}
+        />
+        <span className="op-case-label">
+          {op.description} ({op.points.toFixed(3)})
+        </span>
       </button>
     );
   };
@@ -110,19 +130,28 @@ const styles = {
     gap: '12px',
   },
   button: {
-    padding: '16px 14px',
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
+    all: 'unset',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    padding: '0.7em 1.2em',
+    border: '2px solid',
+    borderRadius: '8px',
+    fontSize: '0.85rem',
+    fontWeight: 600,
     cursor: 'pointer',
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    color: 'var(--text)',
+    overflow: 'hidden',
+    transition: 'border-color 0.3s, color 0.3s',
+    userSelect: 'none',
     textAlign: 'center',
-    lineHeight: 1.3,
     minHeight: '56px',
-    transition: 'all 0.15s',
-    overflowWrap: 'break-word',
-    wordBreak: 'break-word',
+    boxSizing: 'border-box',
+    lineHeight: 1.3,
+    width: '100%',
+    background: 'var(--bg-card)',
+  },
+  buttonHover: {
+    color: '#212121',
   },
 };

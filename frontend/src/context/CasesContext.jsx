@@ -7,21 +7,48 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  serverTimestamp,
-  setDoc,
   getDoc,
+  getDocs,
+  setDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
+import { PERIOD_START, PERIOD_END } from '../utils/metricsHelpers';
+import { useConfig } from './ConfigContext';
+import { useNavigate } from 'react-router-dom';
 
 const CasesContext = createContext();
 
+// Helpers de fecha
+function todayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function dateKeyFromDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function CasesProvider({ children }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downtime, setDowntime] = useState(0);
-
+  const { config } = useConfig();
+  const navigate = useNavigate();
+  // Si hay mantenimiento y no es admin, redirigir
+  useEffect(() => {
+    if (config.maintenance && profile?.role !== 'admin') {
+      navigate('/maintenance');
+    }
+  }, [config.maintenance, profile, navigate]);
   // --- Casos ---
   useEffect(() => {
     if (!user) {
@@ -63,14 +90,15 @@ export function CasesProvider({ children }) {
     return () => unsubscribe();
   }, [user]);
 
-  // --- Downtime (tiempo muerto) ---
+  // --- Downtime del DÍA ACTUAL ---
   useEffect(() => {
     if (!user) {
       setDowntime(0);
       return;
     }
 
-    const docRef = doc(db, 'downtime', user.uid);
+    const key = todayKey();
+    const docRef = doc(db, 'downtime', user.uid, 'days', key);
 
     getDoc(docRef).then((snap) => {
       if (snap.exists()) {
@@ -91,6 +119,7 @@ export function CasesProvider({ children }) {
     return () => unsubscribe();
   }, [user]);
 
+  // --- Operaciones ---
   const addCase = async (caseData) => {
     if (!user) return;
     await addDoc(collection(db, 'cases'), {
@@ -111,7 +140,12 @@ export function CasesProvider({ children }) {
   const updateDowntime = async (hours) => {
     if (!user) return;
     const clamped = Math.max(0, Math.min(8, Number(hours) || 0));
-    await setDoc(doc(db, 'downtime', user.uid), { hours: clamped }, { merge: true });
+    const key = todayKey();
+    await setDoc(
+      doc(db, 'downtime', user.uid, 'days', key),
+      { hours: clamped, date: key },
+      { merge: true }
+    );
   };
 
   const undoLastCase = async () => {
@@ -131,7 +165,12 @@ export function CasesProvider({ children }) {
   const resetAll = async () => {
     if (!user) return;
     await Promise.all(cases.map((c) => deleteDoc(doc(db, 'cases', c.id))));
-    await setDoc(doc(db, 'downtime', user.uid), { hours: 0 }, { merge: true });
+    const key = todayKey();
+    await setDoc(
+      doc(db, 'downtime', user.uid, 'days', key),
+      { hours: 0, date: key },
+      { merge: true }
+    );
   };
 
   const updateNotes = async (caseId, notes) => {
@@ -142,6 +181,91 @@ export function CasesProvider({ children }) {
       { merge: true }
     );
   };
+
+  // --- Leer downtime de un rango de fechas (para Métricas) ---
+  const getDowntimeRange = async (startDate, endDate) => {
+    if (!user) return {};
+    const daysCol = collection(db, 'downtime', user.uid, 'days');
+    const snap = await getDocs(daysCol);
+    const map = {};
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      const key = data.date || docSnap.id;
+      if (key >= startDate && key <= endDate) {
+        map[key] = data.hours || 0;
+      }
+    });
+    return map;
+  };
+
+  // --- Asegurar 8 hrs en días laborales PASADOS y vacíos ---
+  const ensureDowntimeForEmptyDays = async (startDate, endDate, existingCases) => {
+    if (!user) return;
+
+    // 1. Obtener downtime existente del rango
+    const existingDowntime = await getDowntimeRange(startDate, endDate);
+
+    // 2. Agrupar casos por día (YYYY-MM-DD)
+    const casesByDay = {};
+    existingCases.forEach((c) => {
+      const ts = c.timestamp?.toDate?.();
+      if (!ts) return;
+      const key = dateKeyFromDate(ts);
+      casesByDay[key] = (casesByDay[key] || 0) + 1;
+    });
+
+    // 3. Recorrer días del rango (solo los que ya pasaron)
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T23:59:59');
+
+    // Fecha de hoy a medianoche (para comparar solo por día)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const writes = [];
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay(); // 0=dom, 6=sáb
+      // Solo lunes-viernes (1-5)
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+      // 👇 SOLO días estrictamente anteriores a hoy (ayer o antes)
+      const dayOnly = new Date(d);
+      dayOnly.setHours(0, 0, 0, 0);
+      if (dayOnly >= today) continue;
+
+      const key = dateKeyFromDate(d);
+      const hasCases = !!casesByDay[key];
+      const hasDowntime = existingDowntime[key] !== undefined;
+
+      // Si no hay casos y no hay downtime registrado → guardar 8 hrs
+      if (!hasCases && !hasDowntime) {
+        writes.push(
+          setDoc(
+            doc(db, 'downtime', user.uid, 'days', key),
+            { hours: 8, date: key },
+            { merge: true }
+          )
+        );
+      }
+    }
+
+    await Promise.all(writes);
+  };
+
+  // --- Ejecutar ensureDowntimeForEmptyDays al cargar (global) ---
+  // ⚠️ Este useEffect va DESPUÉS de la definición de ensureDowntimeForEmptyDays
+  useEffect(() => {
+    if (!user || cases.length === 0) return;
+    // Evitar ejecuciones múltiples en la misma sesión
+    const key = `ensure-downtime-${user.uid}-${new Date().toDateString()}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    ensureDowntimeForEmptyDays(PERIOD_START, PERIOD_END, cases).catch((err) =>
+      console.error('Error asegurando downtime:', err)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, cases.length]);
 
   return (
     <CasesContext.Provider
@@ -156,6 +280,8 @@ export function CasesProvider({ children }) {
         resetAll,
         markAsRework,
         updateNotes,
+        getDowntimeRange,
+        ensureDowntimeForEmptyDays,
       }}
     >
       {children}

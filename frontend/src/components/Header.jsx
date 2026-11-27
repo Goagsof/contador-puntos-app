@@ -1,43 +1,50 @@
 import Clock from './Clock';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 import { departmentOperations } from '../data/departments';
+import HamburgerButton from './HamburgerButton';
+import ThemeToggle from './ThemeToggle';
 
-export default function Header({ department, onMenuClick }) {
+export default function Header({ title, onMenuClick, isMenuOpen = false, showDepartment = false }) {
   const { profile } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const deptName = departmentOperations[department]?.name || 'Modeling';
+  const navigate = useNavigate();
+
+  const deptName =
+    showDepartment && profile?.role
+      ? departmentOperations[profile.role]?.name || null
+      : null;
+
+  const goHome = () => {
+    const role = profile?.role;
+    if (role === 'admin') navigate('/admin');
+    else if (role === 'lider') navigate('/lider');
+    else navigate('/empleado');
+  };
 
   return (
     <header style={styles.header}>
       <div style={styles.left}>
-        <button onClick={onMenuClick} style={styles.menuBtn} title="Menú">
-          ☰
-        </button>
+        <HamburgerButton isOpen={isMenuOpen} onClick={onMenuClick} title="Menú" />
       </div>
 
       <div style={styles.center}>
         <h1 style={styles.title}>
-          Contador de Puntos
-          <span style={styles.divider}>|</span>
-          <span style={styles.deptName}>{deptName}</span>
+          {title}
+          {deptName && (
+            <>
+              <span style={styles.divider}>|</span>
+              <span style={styles.deptName}>{deptName}</span>
+            </>
+          )}
         </h1>
       </div>
 
       <div style={styles.right}>
-        <button
-          onClick={toggleTheme}
-          style={styles.themeBtn}
-          title={theme === 'dark' ? 'Cambiar a claro' : 'Cambiar a oscuro'}
-        >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
         <Clock />
-        <img
-          src="/Dentsply_Sirona_Logo.webp"
-          alt="Dentsply Sirona"
-          style={styles.logo}
-        />
+        <ThemeToggle />
+        <button onClick={goHome} style={styles.logoBtn} title="Ir al inicio">
+          <img src="/Dentsply_Sirona_Logo.webp" alt="Dentsply Sirona" style={styles.logo} />
+        </button>
       </div>
     </header>
   );
@@ -55,24 +62,11 @@ const styles = {
     boxShadow: '0 2px 8px rgba(0,20,40,0.04)',
     position: 'sticky',
     top: 0,
-    zIndex: 100,
+    zIndex: 200,
     width: '100%',
     boxSizing: 'border-box',
   },
   left: { display: 'flex', alignItems: 'center', gap: '12px' },
-  menuBtn: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    width: '42px',
-    height: '42px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    fontSize: '1.3rem',
-    color: 'var(--primary)',
-  },
   center: { flex: 1, display: 'flex', justifyContent: 'center' },
   title: {
     margin: 0,
@@ -85,18 +79,19 @@ const styles = {
   },
   divider: { fontWeight: 400, color: 'var(--text-soft)' },
   deptName: { fontWeight: 400, color: 'var(--text-soft)' },
-  right: { display: 'flex', alignItems: 'center', gap: '16px' },
-  themeBtn: {
-    background: 'var(--bg-soft)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    width: '42px',
-    height: '42px',
+  right: { display: 'flex', alignItems: 'center', gap: '12px' },
+  logoBtn: {
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    fontSize: '1.1rem',
+    transition: 'opacity 0.15s',
   },
-  logo: { height: '44px', width: 'auto', maxWidth: '160px' },
+  logo: {
+    height: '44px',
+    width: 'auto',
+    maxWidth: '160px',
+  },
 };

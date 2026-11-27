@@ -8,6 +8,9 @@ import {
 import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import Header from '../components/Header';
+import SideMenu from '../components/SideMenu';
+import ThemeToggle from '../components/ThemeToggle';
 
 const ACCENT_OPTIONS = [
   { key: 'azul', label: 'Azul', swatch: '#3b82f6' },
@@ -22,14 +25,16 @@ const ACCENT_OPTIONS = [
 
 export default function Settings() {
   const { user, profile, logout } = useAuth();
-  const { theme, toggleTheme, accent, setAccent } = useTheme();
+  const { theme, accent, setAccent } = useTheme();
   const navigate = useNavigate();
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Cambio de contraseña
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
-  const [passMsg, setPassMsg] = useState(null); // { type: 'ok' | 'error', text }
+  const [passMsg, setPassMsg] = useState(null);
   const [savingPass, setSavingPass] = useState(false);
 
   const handleChangePassword = async (e) => {
@@ -56,10 +61,7 @@ export default function Settings() {
       setConfirmPass('');
     } catch (err) {
       let msg = 'No se pudo cambiar la contraseña.';
-      if (
-        err.code === 'auth/wrong-password' ||
-        err.code === 'auth/invalid-credential'
-      ) {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         msg = 'La contraseña actual es incorrecta.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'La nueva contraseña es demasiado débil.';
@@ -72,13 +74,6 @@ export default function Settings() {
     }
   };
 
-  const handleBack = () => {
-    const role = profile?.role;
-    if (role === 'admin') navigate('/admin');
-    else if (role === 'lider') navigate('/lider');
-    else navigate('/empleado');
-  };
-
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -86,152 +81,153 @@ export default function Settings() {
 
   return (
     <div style={styles.page}>
+      <Header
+        title="Ajustes"
+        onMenuClick={() => setMenuOpen((v) => !v)}
+        isMenuOpen={menuOpen}
+      />
+      <SideMenu
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onNavigateMetrics={() => { setMenuOpen(false); navigate('/metricas'); }}
+      />
+
       <div style={styles.container}>
-        <div style={styles.headerRow}>
-          <button onClick={handleBack} style={styles.backBtn} title="Volver">
-            ←
-          </button>
-          <h1 style={styles.title}>Ajustes</h1>
-          <div style={{ width: '42px' }} /> {/* spacer para centrar título */}
+        {/* Columna izquierda */}
+        <div style={styles.col}>
+          {/* Cuenta */}
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Cuenta</h2>
+            <p style={styles.row}>
+              <span style={styles.label}>Nombre</span>
+              <span style={styles.value}>{profile?.name || '—'}</span>
+            </p>
+            <p style={styles.row}>
+              <span style={styles.label}>Email</span>
+              <span style={styles.value}>{user?.email || '—'}</span>
+            </p>
+            <p style={styles.row}>
+              <span style={styles.label}>Rol</span>
+              <span style={styles.value}>{profile?.role || '—'}</span>
+            </p>
+          </section>
+
+          {/* Apariencia */}
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Apariencia</h2>
+
+            <div style={styles.row}>
+              <span style={styles.label}>Modo</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ ...styles.value, fontSize: '0.85rem' }}>
+                  {theme === 'dark' ? 'Oscuro' : 'Claro'}
+                </span>
+                <ThemeToggle />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ ...styles.label, marginBottom: '10px' }}>Color de acento</p>
+              <div style={styles.accentGrid}>
+                {ACCENT_OPTIONS.map((opt) => {
+                  const active = accent === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => setAccent(opt.key)}
+                      title={opt.label}
+                      style={{
+                        ...styles.accentBtn,
+                        background: opt.swatch,
+                        borderColor: active ? 'var(--text-h)' : 'transparent',
+                        outline: active ? '2px solid var(--text-h)' : 'none',
+                        outlineOffset: '2px',
+                      }}
+                    >
+                      {active && <span style={styles.check}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p style={styles.hint}>
+                El color se guarda en este navegador y se aplica a botones y acentos.
+              </p>
+            </div>
+          </section>
         </div>
 
-        {/* ==== Cuenta ==== */}
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Cuenta</h2>
-          <p style={styles.row}>
-            <span style={styles.label}>Nombre</span>
-            <span style={styles.value}>{profile?.name || '—'}</span>
-          </p>
-          <p style={styles.row}>
-            <span style={styles.label}>Email</span>
-            <span style={styles.value}>{user?.email || '—'}</span>
-          </p>
-          <p style={styles.row}>
-            <span style={styles.label}>Rol</span>
-            <span style={styles.value}>{profile?.role || '—'}</span>
-          </p>
-        </section>
+        {/* Columna derecha */}
+        <div style={styles.col}>
+          {/* Cambiar contraseña */}
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Cambiar contraseña</h2>
 
-        {/* ==== Apariencia ==== */}
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Apariencia</h2>
+            <form onSubmit={handleChangePassword} style={styles.form}>
+              <label style={styles.formLabel}>
+                Contraseña actual
+                <input
+                  type="password"
+                  value={currentPass}
+                  onChange={(e) => setCurrentPass(e.target.value)}
+                  style={styles.input}
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
 
-          {/* Modo */}
-          <div style={styles.row}>
-            <span style={styles.label}>Modo</span>
-            <button onClick={toggleTheme} style={styles.toggleBtn}>
-              {theme === 'dark' ? '🌙 Oscuro' : '☀️ Claro'}
+              <label style={styles.formLabel}>
+                Nueva contraseña
+                <input
+                  type="password"
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  style={styles.input}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </label>
+
+              <label style={styles.formLabel}>
+                Confirmar nueva contraseña
+                <input
+                  type="password"
+                  value={confirmPass}
+                  onChange={(e) => setConfirmPass(e.target.value)}
+                  style={styles.input}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </label>
+
+              {passMsg && (
+                <p
+                  style={{
+                    ...styles.msg,
+                    color: passMsg.type === 'ok' ? 'var(--success)' : 'var(--danger-text)',
+                    background: passMsg.type === 'ok' ? 'var(--success-bg)' : 'var(--danger-bg)',
+                    borderColor: passMsg.type === 'ok' ? 'var(--success-border)' : 'var(--danger-border)',
+                  }}
+                >
+                  {passMsg.text}
+                </p>
+              )}
+
+              <button type="submit" disabled={savingPass} style={styles.primaryBtn}>
+                {savingPass ? 'Guardando...' : 'Cambiar contraseña'}
+              </button>
+            </form>
+          </section>
+
+          {/* Sesión */}
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Sesión</h2>
+            <button onClick={handleLogout} style={styles.logoutBtn}>
+              Cerrar sesión
             </button>
-          </div>
-
-          {/* Color de acento */}
-          <div style={{ marginTop: '16px' }}>
-            <p style={{ ...styles.label, marginBottom: '10px' }}>Color de acento</p>
-            <div style={styles.accentGrid}>
-              {ACCENT_OPTIONS.map((opt) => {
-                const active = accent === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    onClick={() => setAccent(opt.key)}
-                    title={opt.label}
-                    style={{
-                      ...styles.accentBtn,
-                      background: opt.swatch,
-                      borderColor: active ? 'var(--text-h)' : 'transparent',
-                      outline: active ? '2px solid var(--text-h)' : 'none',
-                      outlineOffset: '2px',
-                    }}
-                  >
-                    {active && <span style={styles.check}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-            <p style={styles.hint}>
-              El color se guarda en este navegador y se aplica a botones y acentos.
-            </p>
-          </div>
-        </section>
-
-        {/* ==== Cambiar contraseña ==== */}
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Cambiar contraseña</h2>
-
-          <form onSubmit={handleChangePassword} style={styles.form}>
-            <label style={styles.formLabel}>
-              Contraseña actual
-              <input
-                type="password"
-                value={currentPass}
-                onChange={(e) => setCurrentPass(e.target.value)}
-                style={styles.input}
-                required
-                autoComplete="current-password"
-              />
-            </label>
-
-            <label style={styles.formLabel}>
-              Nueva contraseña
-              <input
-                type="password"
-                value={newPass}
-                onChange={(e) => setNewPass(e.target.value)}
-                style={styles.input}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </label>
-
-            <label style={styles.formLabel}>
-              Confirmar nueva contraseña
-              <input
-                type="password"
-                value={confirmPass}
-                onChange={(e) => setConfirmPass(e.target.value)}
-                style={styles.input}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </label>
-
-            {passMsg && (
-              <p
-                style={{
-                  ...styles.msg,
-                  color:
-                    passMsg.type === 'ok'
-                      ? 'var(--success)'
-                      : 'var(--danger-text)',
-                  background:
-                    passMsg.type === 'ok'
-                      ? 'var(--success-bg)'
-                      : 'var(--danger-bg)',
-                  borderColor:
-                    passMsg.type === 'ok'
-                      ? 'var(--success-border)'
-                      : 'var(--danger-border)',
-                }}
-              >
-                {passMsg.text}
-              </p>
-            )}
-
-            <button type="submit" disabled={savingPass} style={styles.primaryBtn}>
-              {savingPass ? 'Guardando...' : 'Cambiar contraseña'}
-            </button>
-          </form>
-        </section>
-
-        {/* ==== Sesión ==== */}
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Sesión</h2>
-          <button onClick={handleLogout} style={styles.logoutBtn}>
-            Cerrar sesión
-          </button>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );
@@ -242,35 +238,20 @@ const styles = {
     minHeight: '100vh',
     background: 'var(--bg)',
     color: 'var(--text)',
-    padding: '24px 16px 48px',
   },
   container: {
-    maxWidth: '560px',
+    maxWidth: '1400px',
     margin: '0 auto',
+    padding: '24px 16px 48px',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+    alignItems: 'start',
+  },
+  col: {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
-  },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '4px',
-  },
-  backBtn: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-    background: 'var(--bg-card)',
-    color: 'var(--primary)',
-    fontSize: '1.1rem',
-    cursor: 'pointer',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.4rem',
-    color: 'var(--text-h)',
   },
   card: {
     background: 'var(--bg-card)',

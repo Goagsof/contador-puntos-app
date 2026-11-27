@@ -47,10 +47,10 @@ export default function EmployeeDashboard() {
   const handleConfirmCode = (code) => saveCase(code);
   const handleOmitCode = () => saveCase(`AUTO-${Date.now().toString().slice(-6)}`);
 
-  const handleNavigateMetrics = () => {
-    setMenuOpen(false);
-    navigate('/estadisticas');
-  };
+const handleNavigateMetrics = () => {
+  setMenuOpen(false);
+  navigate('/metricas');
+};
 
   const headerDepartment =
     profile?.role === 'di' ? 'DI' : profile?.role === 'qc' ? 'QC' : 'Modeling';
@@ -58,8 +58,10 @@ export default function EmployeeDashboard() {
   return (
     <div style={styles.page}>
       <Header
-        department={headerDepartment}
-        onMenuClick={() => setMenuOpen(true)}
+        title="Contador de Puntos"
+        showDepartment
+        onMenuClick={() => setMenuOpen((v) => !v)}
+        isMenuOpen={menuOpen}
       />
 
       <SideMenu

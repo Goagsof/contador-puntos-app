@@ -20,6 +20,7 @@ export default function Register() {
   const [role, setRole] = useState('modeling');
   const [leaderId, setLeaderId] = useState('');
   const [leaders, setLeaders] = useState([]);
+  const [loadingLeaders, setLoadingLeaders] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -35,10 +36,13 @@ export default function Register() {
           name: d.data().name,
           email: d.data().email,
         }));
-        list.sort((a, b) => a.name.localeCompare(b.name));
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setLeaders(list);
       } catch (err) {
         console.error('Error al cargar líderes:', err);
+        setError('No se pudieron cargar los líderes. Intenta de nuevo.');
+      } finally {
+        setLoadingLeaders(false);
       }
     };
     loadLeaders();
@@ -91,6 +95,8 @@ export default function Register() {
         setError('El email no es válido.');
       } else if (err.code === 'auth/weak-password') {
         setError('La contraseña es demasiado débil.');
+      } else if (err.code === 'permission-denied') {
+        setError('No se pudo crear el perfil. Contacta al administrador.');
       } else {
         setError('Error al registrarse: ' + err.message);
       }
@@ -121,6 +127,7 @@ export default function Register() {
             onChange={(e) => setEmail(e.target.value)}
             style={styles.input}
             required
+            autoComplete="email"
           />
           <input
             type="password"
@@ -129,6 +136,8 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
             style={styles.input}
             required
+            minLength={6}
+            autoComplete="new-password"
           />
           <input
             type="password"
@@ -137,6 +146,8 @@ export default function Register() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             style={styles.input}
             required
+            minLength={6}
+            autoComplete="new-password"
           />
 
           <select
@@ -155,8 +166,11 @@ export default function Register() {
             onChange={(e) => setLeaderId(e.target.value)}
             style={styles.input}
             required
+            disabled={loadingLeaders}
           >
-            <option value="">Selecciona tu líder</option>
+            <option value="">
+              {loadingLeaders ? 'Cargando líderes...' : 'Selecciona tu líder'}
+            </option>
             {leaders.map((l) => (
               <option key={l.uid} value={l.uid}>
                 {l.name}
@@ -164,9 +178,19 @@ export default function Register() {
             ))}
           </select>
 
+          {leaders.length === 0 && !loadingLeaders && (
+            <p style={styles.warn}>
+              No se encontraron líderes disponibles. Contacta al administrador.
+            </p>
+          )}
+
           {error && <p style={styles.error}>{error}</p>}
 
-          <button type="submit" disabled={loading} style={styles.button}>
+          <button
+            type="submit"
+            disabled={loading || loadingLeaders}
+            style={styles.button}
+          >
             {loading ? 'Creando cuenta...' : 'Registrarme'}
           </button>
         </form>
@@ -188,25 +212,26 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#f0f4fc',
+    background: 'var(--bg)',
     padding: '20px',
   },
   card: {
-    background: '#fff',
+    background: 'var(--bg-card)',
     padding: '36px',
     borderRadius: '16px',
-    boxShadow: '0 4px 20px rgba(0,20,40,0.08)',
+    border: '1px solid var(--border)',
+    boxShadow: 'var(--shadow)',
     width: '100%',
     maxWidth: '420px',
   },
   title: {
     margin: 0,
-    color: '#1a3b66',
+    color: 'var(--text-h)',
     fontSize: '1.6rem',
     textAlign: 'center',
   },
   subtitle: {
-    color: '#4a6f9c',
+    color: 'var(--text-soft)',
     textAlign: 'center',
     marginBottom: '24px',
     fontSize: '0.9rem',
@@ -218,18 +243,18 @@ const styles = {
   },
   input: {
     padding: '11px 14px',
-    border: '1px solid #d9e2ef',
+    border: '1px solid var(--border)',
     borderRadius: '8px',
     fontSize: '0.92rem',
-    background: '#f7faff',
-    color: '#1e2b3c',
+    background: 'var(--bg-soft)',
+    color: 'var(--text-h)',
     outline: 'none',
     boxSizing: 'border-box',
     width: '100%',
   },
   button: {
     padding: '12px',
-    background: '#1a3b66',
+    background: 'var(--primary)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -237,21 +262,33 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
     marginTop: '8px',
+    transition: 'all 0.15s ease',
   },
   error: {
-    color: '#c0392b',
+    color: 'var(--danger-text)',
+    background: 'var(--danger-bg)',
+    border: '1px solid var(--danger-border)',
+    borderRadius: '8px',
+    padding: '8px 12px',
     fontSize: '0.85rem',
     textAlign: 'center',
     margin: 0,
+  },
+  warn: {
+    color: 'var(--text-soft)',
+    fontSize: '0.8rem',
+    textAlign: 'center',
+    margin: 0,
+    fontStyle: 'italic',
   },
   footer: {
     marginTop: '18px',
     textAlign: 'center',
     fontSize: '0.85rem',
-    color: '#4a6f9c',
+    color: 'var(--text-soft)',
   },
   link: {
-    color: '#1a3b66',
+    color: 'var(--primary)',
     fontWeight: 600,
     textDecoration: 'none',
   },
